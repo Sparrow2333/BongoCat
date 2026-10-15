@@ -217,6 +217,7 @@
       "internal": "La mise à jour a échoué pour une raison inattendue."
     },
     "unavailable": {
+      "standalone_build": "Téléchargez le nouvel EXE pour mettre à jour cette version à fichier unique.",
       "development_build": "Les versions de développement ne peuvent pas installer les mises à jour publiées.",
       "signing_key_missing": "Cette version ne peut pas vérifier les mises à jour, la mise à jour est donc désactivée."
     },

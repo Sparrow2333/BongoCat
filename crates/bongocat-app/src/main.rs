@@ -33,6 +33,8 @@ mod product_shutdown;
 mod product_windows;
 mod smoke;
 mod smoke_status;
+#[cfg(feature = "standalone")]
+mod standalone;
 mod system_menu;
 // Windows only in a product build, since the taskbar button is; the tests read
 // the settle decision on every platform, which is the point of keeping it apart
@@ -258,6 +260,8 @@ struct ProductCoordinator {
     shutdown_requested: Arc<AtomicBool>,
     #[cfg(target_os = "windows")]
     shutdown_flush_complete: Arc<AtomicBool>,
+    #[cfg(feature = "standalone")]
+    _standalone_presets: standalone::PresetResources,
 }
 
 impl Global for ProductCoordinator {}
@@ -281,6 +285,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(error) => return Err(Box::new(error)),
     };
+    #[cfg(feature = "standalone")]
+    if run_options.embedded_presets_smoke {
+        let resources = standalone::PresetResources::prepare()?;
+        bongocat_model::PresetModelCatalog::open(
+            resources.path(),
+            bongocat_model::ModelPackageLimits::default(),
+        )?;
+        return Ok(());
+    }
     // The native surfaces that can only follow the *system* theme — the ComCtl32 alerts,
     // the Win32 menus and the shell file dialog — render dark only if the process asks
     // for it before the first window exists, so this is the earliest point that can ask.
@@ -329,7 +342,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Ok(());
         }
     };
-    let mut application = bongocat_app::Application::start(preset_root())?;
+    #[cfg(feature = "standalone")]
+    let standalone_presets = standalone::PresetResources::prepare()?;
+    #[cfg(feature = "standalone")]
+    let embedded_root = Some(standalone_presets.path().to_path_buf());
+    #[cfg(not(feature = "standalone"))]
+    let embedded_root: Option<PathBuf> = None;
+    let product_preset_root = embedded_root.unwrap_or_else(preset_root);
+    let mut application = bongocat_app::Application::start(&product_preset_root)?;
     let application_log = application.log_handle();
     application.install_process_panic_hook();
     let core_log = CoreLogHandle::install(
@@ -609,11 +629,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(target_os = "windows")]
         let frame_overlay = Rc::clone(&overlay);
         #[cfg(target_os = "windows")]
-        let online_desktop = match online_desktop::OnlineDesktop::new(&frame_runtime_client, preset_root()) {
+        let online_desktop = match online_desktop::OnlineDesktop::new(&frame_runtime_client, product_preset_root.clone()) {
             Ok(desktop) => { settings_client.set_online_client(desktop.settings_handle()); Some(desktop) },
             Err(error) => { record_failure(&run_failures, error); None },
         };
         cx.set_global(ProductCoordinator {
+            #[cfg(feature = "standalone")]
+            _standalone_presets: standalone_presets,
             #[cfg(target_os = "windows")]
             online_desktop,
             _core_log: core_log,

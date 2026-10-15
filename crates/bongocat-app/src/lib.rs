@@ -148,18 +148,19 @@ pub const BUILD_ENVIRONMENT: BuildEnvironment = BuildEnvironment::Development;
 
 /// Whether this build can actually check for and install updates.
 ///
-/// Updates require a Production channel and a provisioned release signing key;
-/// a Development build never installs a release artifact. This is the
+/// Single executable builds are updated manually. Other builds require a Production
+/// channel and a provisioned release signing key; a Development build never installs
+/// a release artifact. This is the
 /// availability fact only — the system menu additionally keeps the entry
 /// clickable in Development builds, because the update window is where the
 /// "development build" explanation lives.
 pub fn update_check_available() -> bool {
-    bongocat_update::UpdateRuntime::for_current_build(
+    let runtime = bongocat_update::UpdateRuntime::for_current_build(
         BUILD_ENVIRONMENT,
         PRODUCT_VERSION,
         bongocat_update::UpdateDiagnosticsTracker::default(),
-    )
-    .is_available()
+    );
+    update::UpdateEngine::unavailability(&runtime).is_none()
 }
 
 #[derive(Debug, thiserror::Error)]

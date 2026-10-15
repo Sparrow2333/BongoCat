@@ -540,6 +540,18 @@ class MacosBundleTests(unittest.TestCase):
 
 
 class BuildEntryPointTests(unittest.TestCase):
+    def test_windows_single_exe_is_built_and_verified_without_sidecar_resources(self):
+        workflow = read(WORKFLOW_DIRECTORY / "windows-build.yml")
+        self.assertIn(
+            "just build --environment development --target x86_64-pc-windows-msvc --standalone",
+            workflow,
+        )
+        self.assertIn("path: target/package/BongoCat_*_standalone.exe", workflow)
+        self.assertIn("--embedded-presets-smoke", workflow)
+        self.assertIn("-WorkingDirectory $smokeDirectory", workflow)
+        self.assertIn("$process.ExitCode -ne 0", workflow)
+        self.assertIn("cargo test --locked -p bongocat-app --features standalone", workflow)
+
     def test_just_stays_a_thin_entry_point(self):
         source = read(JUSTFILE)
         self.assertIn("cargo run --locked -p bongocat-packaging", source)

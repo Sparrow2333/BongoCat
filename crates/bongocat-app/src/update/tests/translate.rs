@@ -30,6 +30,10 @@ fn every_source_stage_has_a_ui_stage() {
 #[test]
 fn unavailability_reasons_are_preserved() {
     assert_eq!(
+        unavailable_reason(UpdateUnavailability::StandaloneBuild),
+        UpdateUnavailableReason::StandaloneBuild
+    );
+    assert_eq!(
         unavailable_reason(UpdateUnavailability::DevelopmentChannel),
         UpdateUnavailableReason::DevelopmentBuild
     );

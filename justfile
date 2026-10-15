@@ -40,8 +40,11 @@ check:
     cargo clippy --locked --workspace --all-targets --all-features --exclude bongocat-app -- -D warnings
     cargo clippy --locked -p bongocat-app --all-targets --features storage-test-injection -- -D warnings
     cargo clippy --locked -p bongocat-app --all-targets --features production -- -D warnings
+    cargo clippy --locked -p bongocat-app --all-targets --features standalone -- -D warnings
+    cargo clippy --locked -p bongocat-app --all-targets --features production,standalone -- -D warnings
     cargo clippy --locked -p bongocat-app --all-targets --features online-smoke -- -D warnings
     cargo test --locked --workspace
+    cargo test --locked -p bongocat-app --features standalone
     cargo check --locked --workspace --release
 
 # `--target`, `--environment` and `--formats` are forwarded to the packaging
@@ -50,6 +53,7 @@ check:
 #   just build
 #   just build --target x86_64-apple-darwin
 #   just build --environment development --formats app
+#   just build --target x86_64-pc-windows-msvc --standalone
 #
 # Build the Production product and package the release artifacts.
 build *args:

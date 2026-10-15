@@ -20,6 +20,8 @@ use async_channel::{Receiver, Sender};
 /// variant only reaches the UI so a diagnostics surface can explain the absence.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UpdateUnavailableReason {
+    /// The single executable distribution is updated by downloading a new EXE.
+    StandaloneBuild,
     /// The build carries the Development channel and never installs a release.
     DevelopmentBuild,
     /// No release signing key is provisioned, so nothing could be authenticated.

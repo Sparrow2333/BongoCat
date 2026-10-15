@@ -217,6 +217,7 @@
       "internal": "Cập nhật thất bại vì lý do không mong muốn."
     },
     "unavailable": {
+      "standalone_build": "Tải EXE mới để cập nhật phiên bản một tệp này.",
       "development_build": "Bản dựng phát triển không thể cài đặt bản cập nhật phát hành.",
       "signing_key_missing": "Phiên bản này không thể xác minh bản cập nhật nên tính năng cập nhật đã bị tắt."
     },

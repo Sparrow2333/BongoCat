@@ -36,6 +36,8 @@ impl UpdateStage {
 /// Why this build cannot check for or install updates.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UpdateUnavailability {
+    /// The distribution cannot use installer-based updates.
+    StandaloneBuild,
     /// The build's channel is not allowed to update.
     DevelopmentChannel,
     /// No release signing key is provisioned.

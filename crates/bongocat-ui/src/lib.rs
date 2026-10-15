@@ -214,6 +214,9 @@ pub(crate) mod tests {
         };
         vec![
             UpdatePhase::Unavailable {
+                reason: UpdateUnavailableReason::StandaloneBuild,
+            },
+            UpdatePhase::Unavailable {
                 reason: UpdateUnavailableReason::DevelopmentBuild,
             },
             UpdatePhase::Unavailable {

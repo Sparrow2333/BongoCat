@@ -29,6 +29,10 @@ pub(crate) const PROGRAM_NAME: &str = "bongocat-app";
                   --run-seconds value enables a bounded diagnostic run."
 )]
 pub(crate) struct RunOptions {
+    /// Verify the embedded model resources without creating product windows.
+    #[cfg(feature = "standalone")]
+    #[arg(long)]
+    pub(crate) embedded_presets_smoke: bool,
     /// Run for this many seconds instead of until the product is quit.
     ///
     /// Zero is the default and means the same unbounded lifetime as passing nothing.
@@ -173,7 +177,7 @@ impl RunOptions {
     /// hangs on it: a harness is launched by a script on a machine where nobody can
     /// answer a native dialog.
     pub(crate) fn automated_verification(&self) -> bool {
-        self.settings_window_smoke
+        let automated = self.settings_window_smoke
             || self.settings_window_open_smoke
             || self.models_page_smoke
             || self.hidden_model_switch_smoke
@@ -181,7 +185,10 @@ impl RunOptions {
             || self.startup_permission_smoke
             || self.single_instance_arguments_present()
             || self.macos_smoke_arguments_present()
-            || self.storage_test_injection_arguments_present()
+            || self.storage_test_injection_arguments_present();
+        #[cfg(feature = "standalone")]
+        let automated = automated || self.embedded_presets_smoke;
+        automated
     }
 
     /// Whether a single-instance flag or marker file was named.

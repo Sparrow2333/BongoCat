@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Windows x64 development installer
+    name: Build Windows x64 development single EXE
     if: github.repository == 'Sparrow2333/BongoCat'
     runs-on: windows-latest
     timeout-minutes: 90
@@ -40,33 +40,48 @@ jobs:
           key: windows-development-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
             windows-development-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}-
-      - name: Build the development installer
-        run: just build --environment development --target x86_64-pc-windows-msvc --formats nsis
-      - name: Verify the installer
+      - name: Test standalone resources and update boundaries
+        run: cargo test --locked -p bongocat-app --features standalone
+      - name: Build the development single EXE
+        run: just build --environment development --target x86_64-pc-windows-msvc --standalone
+      - name: Verify the single EXE away from the repository
         shell: pwsh
         run: |
-          $installers = @(Get-ChildItem -Path target/package -Filter 'BongoCat_*.exe' -File)
-          if ($installers.Count -ne 1) {
-            throw "Expected one installer, found $($installers.Count)"
+          $executables = @(Get-ChildItem -Path target/package -Filter 'BongoCat_*_standalone.exe' -File)
+          if ($executables.Count -ne 1) {
+            throw "Expected one standalone EXE, found $($executables.Count)"
           }
-          if ($installers[0].Length -eq 0) { throw 'The installer is empty' }
-          Get-FileHash -LiteralPath $installers[0].FullName -Algorithm SHA256
-      - name: Upload the installer
-        id: installer
+          if ($executables[0].Length -eq 0) { throw 'The executable is empty' }
+          Get-FileHash -LiteralPath $executables[0].FullName -Algorithm SHA256
+          $smokeDirectory = Join-Path $env:RUNNER_TEMP 'BongoCat single EXE smoke'
+          New-Item -ItemType Directory -Path $smokeDirectory -Force | Out-Null
+          $smokeExe = Join-Path $smokeDirectory 'BongoCat.exe'
+          Copy-Item -LiteralPath $executables[0].FullName -Destination $smokeExe
+          $process = Start-Process -FilePath $smokeExe -ArgumentList '--embedded-presets-smoke' -WorkingDirectory $smokeDirectory -PassThru
+          if (-not $process.WaitForExit(60000)) {
+            $process.Kill()
+            throw 'Embedded preset verification timed out'
+          }
+          if ($process.ExitCode -ne 0) { throw "Embedded preset verification failed: $($process.ExitCode)" }
+          if (@(Get-ChildItem -LiteralPath $smokeDirectory).Count -ne 1) {
+            throw 'Standalone smoke wrote files next to the EXE'
+          }
+      - name: Upload the single EXE
+        id: executable
         uses: actions/upload-artifact@v7
         with:
           name: BongoCat-Windows-x64-development
-          path: target/package/BongoCat_*.exe
+          path: target/package/BongoCat_*_standalone.exe
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
       - name: Show the download link
         shell: pwsh
         env:
-          ARTIFACT_URL: ${{ steps.installer.outputs.artifact-url }}
+          ARTIFACT_URL: ${{ steps.executable.outputs.artifact-url }}
         run: |
-          "[Download the Windows x64 development installer]($env:ARTIFACT_URL)" >> $env:GITHUB_STEP_SUMMARY
-          'Extract the downloaded artifact and run its EXE on Windows. Development application data is separate from the production version.' >> $env:GITHUB_STEP_SUMMARY
+          "[Download the Windows x64 development single EXE]($env:ARTIFACT_URL)" >> $env:GITHUB_STEP_SUMMARY
+          'Extract the downloaded artifact and run its single EXE on Windows; no installer or sidecar model folder is needed. Development application data is separate from the production version. Replace the EXE manually to update.' >> $env:GITHUB_STEP_SUMMARY
       - name: Save Rust build cache
         if: always() && !cancelled() && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6

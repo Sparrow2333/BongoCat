@@ -11,6 +11,7 @@ default-run = "bongocat-app"
 
 [features]
 production = []
+standalone = ["dep:tempfile"]
 storage-test-injection = []
 online-smoke = ["storage-test-injection", "dep:bongocat-room-server", "dep:tokio"]
 
@@ -40,6 +41,7 @@ gpui-kit.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+tempfile = { workspace = true, optional = true }
 zip.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]

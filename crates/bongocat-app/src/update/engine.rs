@@ -24,7 +24,11 @@ pub(crate) trait UpdateEngine: Send + 'static {
 
 impl UpdateEngine for UpdateRuntime {
     fn unavailability(&self) -> Option<UpdateUnavailability> {
-        UpdateRuntime::unavailability(self)
+        if cfg!(feature = "standalone") {
+            Some(UpdateUnavailability::StandaloneBuild)
+        } else {
+            UpdateRuntime::unavailability(self)
+        }
     }
 
     fn release_page_url(&self, version: &str) -> Option<String> {

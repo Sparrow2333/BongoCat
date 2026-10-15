@@ -54,6 +54,7 @@ pub(crate) fn run_check(
             application_log,
             ApplicationLogEvent::new(ApplicationLogCode::UpdateUnavailable).with_context(
                 ApplicationLogContext::Reason(match reason {
+                    UpdateUnavailability::StandaloneBuild => "standalone_build",
                     UpdateUnavailability::DevelopmentChannel => "development_channel",
                     UpdateUnavailability::SigningKeyMissing => "signing_key_missing",
                 }),
@@ -121,6 +122,7 @@ pub(crate) fn run_install(
             application_log,
             ApplicationLogEvent::new(ApplicationLogCode::UpdateUnavailable).with_context(
                 ApplicationLogContext::Reason(match reason {
+                    UpdateUnavailability::StandaloneBuild => "standalone_build",
                     UpdateUnavailability::DevelopmentChannel => "development_channel",
                     UpdateUnavailability::SigningKeyMissing => "signing_key_missing",
                 }),

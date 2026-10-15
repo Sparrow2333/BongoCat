@@ -3,6 +3,8 @@
 #[path = "src/product_icon_contract.rs"]
 mod product_icon_contract;
 
+mod standalone_build;
+
 use product_icon_contract::{validate_icns, validate_ico, validate_png};
 use std::path::{Path, PathBuf};
 
@@ -15,6 +17,18 @@ fn main() {
     let manifest_dir = PathBuf::from(
         std::env::var_os("CARGO_MANIFEST_DIR").expect("Cargo must provide CARGO_MANIFEST_DIR"),
     );
+    if std::env::var_os("CARGO_FEATURE_STANDALONE").is_some() {
+        println!("cargo::rerun-if-changed=standalone_build.rs");
+        println!("cargo::rerun-if-env-changed=BONGOCAT_BUILD_PROVENANCE");
+        let provenance = std::env::var_os("BONGOCAT_BUILD_PROVENANCE").map(PathBuf::from);
+        let output = PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo output directory"));
+        standalone_build::generate(
+            &manifest_dir.join("../../resources/models"),
+            &output.join("embedded-presets.rs"),
+            provenance.as_deref(),
+        )
+        .expect("embed standalone preset models");
+    }
     let resources_dir = manifest_dir.join("../../resources/icons");
     validate_icon(
         &resources_dir.join("logo-macos.icns"),

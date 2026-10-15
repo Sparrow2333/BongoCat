@@ -217,6 +217,7 @@
       "internal": "예기치 못한 이유로 업데이트에 실패했습니다."
     },
     "unavailable": {
+      "standalone_build": "이 단일 파일 버전을 업데이트하려면 새 EXE를 다운로드하세요.",
       "development_build": "개발 빌드는 릴리스 업데이트를 설치할 수 없습니다.",
       "signing_key_missing": "이 버전은 업데이트를 확인할 수 없어 업데이트가 비활성화되어 있습니다."
     },

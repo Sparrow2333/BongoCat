@@ -1698,6 +1698,10 @@ reset、macOS/WGI bounded stop/join 和 target-scoped compile guard，Windows WG
 
 ### ADR-023：Windows Per-User Installer
 
+Windows 另支持 `just build --standalone` 单文件分发（ADR-0091）：模型内嵌于 EXE，启动时在私有临时目录
+释放，由产品 owner 保持至所有模型消费者退出后清理；配置继续按环境存储。单文件模式禁用安装器更新，
+手动替换 EXE。现有 Cubism MD 链接方式不变，干净 Windows 的 VC 运行库依赖与实机验收仍是交付门禁。
+
 Windows 首发采用固定、可审计 NSIS per-user installer，不请求管理员权限或触及环境数据。原设计中的
 「独立 Rust update helper 只接收已验证 artifact」已随 ADR-0029 作废：不再有独立 helper，替换由
 更新库在进程内完成（Windows 上由库运行下载到的安装器），installer 权限、原子替换与 rollback 仍是

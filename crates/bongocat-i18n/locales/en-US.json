@@ -217,6 +217,7 @@
       "internal": "The update failed for an unexpected reason."
     },
     "unavailable": {
+      "standalone_build": "Download the new EXE to update this single-file version.",
       "development_build": "Development builds cannot install release updates.",
       "signing_key_missing": "This version cannot verify updates, so updating is disabled."
     },

@@ -2,6 +2,50 @@
 
 use super::*;
 
+#[cfg(feature = "standalone")]
+#[test]
+fn standalone_builds_hide_updates_in_both_environments() {
+    for environment in [
+        bongocat_config::BuildEnvironment::Development,
+        bongocat_config::BuildEnvironment::Production,
+    ] {
+        let root = tempdir().expect("isolated logs");
+        let log = ApplicationLogHandle::install(root.path()).expect("log");
+        let service = ApplicationUpdateService::start(
+            environment,
+            "1.0.0",
+            bongocat_update::UpdateDiagnosticsTracker::default(),
+            log,
+        )
+        .expect("standalone update service");
+        assert_eq!(
+            service.state().phase(),
+            UpdatePhase::Unavailable {
+                reason: UpdateUnavailableReason::StandaloneBuild,
+            }
+        );
+        service.join().expect("update worker exits");
+    }
+}
+
+#[test]
+fn standalone_updates_never_enter_the_installer() {
+    let mut engine = ScriptedEngine::installing(Ok(UpdateOutcome::UpToDate), Vec::new());
+    engine.unavailability = Some(UpdateUnavailability::StandaloneBuild);
+    let installs = Arc::clone(&engine.installs);
+    let service = ApplicationUpdateService::start_with_engine(engine, "1.0.0").expect("worker");
+    let state = service.state();
+    service.client().request_install().expect("queue install");
+    service.join().expect("worker exits after queued install");
+    assert_eq!(
+        state.phase(),
+        UpdatePhase::Unavailable {
+            reason: UpdateUnavailableReason::StandaloneBuild,
+        }
+    );
+    assert_eq!(*installs.lock().expect("install count"), 0);
+}
+
 #[test]
 fn a_check_that_finds_a_release_publishes_its_metadata() {
     let (phase, _) = settled_phase(

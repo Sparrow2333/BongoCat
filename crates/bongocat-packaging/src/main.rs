@@ -432,6 +432,7 @@ struct Options {
     target: Option<ReleaseTarget>,
     environment: String,
     formats: Option<Vec<PackageFormat>>,
+    standalone: bool,
 }
 
 impl Invocation {
@@ -445,6 +446,8 @@ options:
                             x86_64-apple-darwin, x86_64-pc-windows-msvc;
                             defaults to the host target
   --environment <name>     development | production (default: production)
+  --standalone             Windows x64 single executable; no installer updates;
+                           cannot be combined with --formats
   --formats <list>         comma separated subset of the target's release
                            artifacts (app,dmg for macOS; nsis for Windows)
   --merge-manifests <dir>  merge the per-target fragments that follow into the
@@ -475,6 +478,7 @@ environment:
         let mut target = None;
         let mut environment = None;
         let mut formats = None;
+        let mut standalone = false;
         let mut merge_directory: Option<PathBuf> = None;
         let mut release_notes: Option<PathBuf> = None;
         let mut extract_notes: Option<PathBuf> = None;
@@ -502,6 +506,7 @@ environment:
                     let value = next_value(&mut arguments, "--formats")?;
                     formats = Some(parse_formats(&value)?);
                 }
+                "--standalone" => standalone = true,
                 "--merge-manifests" => {
                     let directory = next_value(&mut arguments, "--merge-manifests")?;
                     merge_directory = Some(PathBuf::from(directory));
@@ -543,12 +548,19 @@ environment:
         // Neither alternative mode builds anything, so an option that only affects a
         // build is a mistake rather than a no-op, and the two alternatives are mutually
         // exclusive.
-        let build_option = target.is_some() || environment.is_some() || formats.is_some();
+        if standalone && formats.is_some() {
+            return failure("--standalone cannot be combined with --formats");
+        }
+        if standalone && target.is_some_and(ReleaseTarget::is_apple) {
+            return failure("--standalone is only supported for x86_64-pc-windows-msvc");
+        }
+        let build_option =
+            target.is_some() || environment.is_some() || formats.is_some() || standalone;
         if let Some(file) = key_output {
             if build_option || merge_directory.is_some() || release_notes.is_some() {
                 return failure(
                     "--generate-signing-key cannot be combined with --target, --environment, \
-                     --formats, --merge-manifests or --release-notes",
+                     --formats, --standalone, --merge-manifests or --release-notes",
                 );
             }
             return Ok(Self::GenerateSigningKey(file));
@@ -562,7 +574,7 @@ environment:
             if build_option || merge_directory.is_some() || release_notes.is_some() {
                 return failure(
                     "--extract-release-notes cannot be combined with --target, --environment, \
-                     --formats, --merge-manifests or --release-notes",
+                     --formats, --standalone, --merge-manifests or --release-notes",
                 );
             }
             return Ok(Self::ExtractReleaseNotes(file));
@@ -577,11 +589,12 @@ environment:
                 target,
                 environment: environment.unwrap_or_else(|| "production".to_owned()),
                 formats,
+                standalone,
             }));
         };
         if build_option {
             return failure(
-                "--merge-manifests cannot be combined with --target, --environment or --formats",
+                "--merge-manifests cannot be combined with --target, --environment, --formats or --standalone",
             );
         }
         Ok(Self::MergeManifest {
@@ -655,6 +668,13 @@ fn package(options: Options) -> Result<Vec<PathBuf>> {
         Some(target) => target,
         None => ReleaseTarget::host()?,
     };
+    if options.standalone {
+        if target != ReleaseTarget::WindowsX86_64 {
+            return failure("--standalone is only supported for x86_64-pc-windows-msvc");
+        }
+        build_application(&workspace, target, &options.environment, true)?;
+        return package_standalone(&workspace, target);
+    }
     let requested = match &options.formats {
         Some(formats) => {
             for format in formats {
@@ -683,7 +703,7 @@ fn package(options: Options) -> Result<Vec<PathBuf>> {
             .join(",")
     );
 
-    build_application(&workspace, target, &options.environment)?;
+    build_application(&workspace, target, &options.environment, false)?;
     let provenance = write_provenance(
         &workspace,
         target,
@@ -789,7 +809,12 @@ fn environment_features(environment: &str) -> &'static str {
 ///
 /// The environment is expressed to Cargo as a feature instead of an environment
 /// variable, so Cargo owns feature parsing and build-script rerun semantics.
-fn build_application(workspace: &Path, target: ReleaseTarget, environment: &str) -> Result<()> {
+fn build_application(
+    workspace: &Path,
+    target: ReleaseTarget,
+    environment: &str,
+    standalone: bool,
+) -> Result<()> {
     let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let mut command = Command::new(&cargo);
     command.current_dir(workspace).args([
@@ -805,6 +830,16 @@ fn build_application(workspace: &Path, target: ReleaseTarget, environment: &str)
     if features != "default" {
         command.args(["--features", features]);
     }
+    if standalone {
+        command.args(["--features", "standalone"]);
+        let features = if features == "default" {
+            "standalone".to_owned()
+        } else {
+            format!("{features},standalone")
+        };
+        let provenance = write_provenance(workspace, target, environment, &features)?;
+        command.env("BONGOCAT_BUILD_PROVENANCE", provenance);
+    }
     let status = command.status().map_err(|error| {
         Box::new(Failure(format!(
             "could not run {}: {error}",
@@ -818,6 +853,29 @@ fn build_application(workspace: &Path, target: ReleaseTarget, environment: &str)
         ));
     }
     Ok(())
+}
+
+/// The application embeds its resources at compile time; this only publishes that EXE.
+/// Installer update manifests and signatures must never announce it as an NSIS payload.
+fn package_standalone(workspace: &Path, target: ReleaseTarget) -> Result<Vec<PathBuf>> {
+    let source = workspace
+        .join("target")
+        .join(target.triple())
+        .join("release")
+        .join(format!("{APPLICATION_BINARY}.exe"));
+    let output = workspace.join(OUTPUT_DIRECTORY);
+    verify_artifacts(target, std::slice::from_ref(&source))?;
+    fs::create_dir_all(&output)?;
+    let destination = output.join(format!(
+        "{PRODUCT_NAME}_{}_{}_standalone.exe",
+        env!("CARGO_PKG_VERSION"),
+        target.architecture()
+    ));
+    let mut staged = tempfile::NamedTempFile::new_in(&output)?;
+    std::io::copy(&mut fs::File::open(source)?, staged.as_file_mut())?;
+    staged.as_file().sync_all()?;
+    staged.persist(&destination)?;
+    Ok(vec![destination])
 }
 
 /// Writes the path-free build provenance record into the packaging staging area.
@@ -2453,6 +2511,68 @@ fn report(summary: &str, artifacts: &[PathBuf]) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn standalone_options_are_windows_only_and_exclude_installer_formats() {
+        let parse = |args: &[&str]| {
+            super::Invocation::parse(args.iter().map(|value| value.to_string()).collect())
+        };
+        let Ok(super::Invocation::Package(options)) = parse(&[
+            "--standalone",
+            "--target",
+            "x86_64-pc-windows-msvc",
+            "--environment",
+            "development",
+        ]) else {
+            panic!("Windows standalone must parse");
+        };
+        assert!(options.standalone);
+        assert_eq!(options.environment, "development");
+        for args in [
+            vec!["--standalone", "--formats", "nsis"],
+            vec!["--standalone", "--target", "aarch64-apple-darwin"],
+            vec!["--standalone", "--merge-manifests", "out"],
+            vec!["--standalone", "--extract-release-notes", "notes.md"],
+            vec!["--standalone", "--generate-signing-key", "key"],
+        ] {
+            assert!(parse(&args).is_err(), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn standalone_publishes_one_exe_and_preserves_it_if_the_next_build_is_missing() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let target = super::ReleaseTarget::WindowsX86_64;
+        let source = workspace
+            .path()
+            .join("target")
+            .join(target.triple())
+            .join("release");
+        std::fs::create_dir_all(&source).expect("binary directory");
+        let binary = source.join("bongocat-app.exe");
+        std::fs::write(&binary, b"MZ compiled executable with embedded resources").expect("binary");
+        let artifacts = super::package_standalone(workspace.path(), target).expect("publish EXE");
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(
+            std::fs::read(&artifacts[0]).expect("EXE"),
+            std::fs::read(&binary).expect("source")
+        );
+        assert!(
+            artifacts[0]
+                .file_name()
+                .expect("name")
+                .to_string_lossy()
+                .ends_with("_x64_standalone.exe")
+        );
+        std::fs::remove_file(binary).expect("simulate failed build");
+        assert!(super::package_standalone(workspace.path(), target).is_err());
+        assert!(artifacts[0].is_file());
+        std::fs::write(source.join("bongocat-app.exe"), b"").expect("empty binary");
+        assert!(super::package_standalone(workspace.path(), target).is_err());
+        assert_eq!(
+            std::fs::read(&artifacts[0]).expect("preserved EXE"),
+            b"MZ compiled executable with embedded resources"
+        );
+    }
     use super::{
         INSTALLER_LANGUAGES, MODEL_DIRECTORY, OUTPUT_DIRECTORY, PRESET_MODELS, PRODUCT_NAME,
         ReleaseTarget, is_packaging_junk,

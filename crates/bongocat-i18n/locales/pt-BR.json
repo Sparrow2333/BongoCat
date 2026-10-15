@@ -217,6 +217,7 @@
       "internal": "A atualização falhou por um motivo inesperado."
     },
     "unavailable": {
+      "standalone_build": "Baixe o novo EXE para atualizar esta versão de arquivo único.",
       "development_build": "Builds de desenvolvimento não podem instalar atualizações de lançamento.",
       "signing_key_missing": "Esta versão não pode verificar atualizações, portanto a atualização está desativada."
     },

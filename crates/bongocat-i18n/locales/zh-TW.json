@@ -217,6 +217,7 @@
       "internal": "更新因未預期原因失敗。"
     },
     "unavailable": {
+      "standalone_build": "請下載新版 EXE 更新此單檔版本。",
       "development_build": "開發版本不會安裝正式版更新。",
       "signing_key_missing": "目前版本無法驗證更新，因此更新功能已關閉。"
     },
