@@ -29,6 +29,17 @@ jobs:
       - name: Install the target for the repository toolchain
         run: rustup target add x86_64-pc-windows-msvc
       - uses: taiki-e/install-action@just
+      - name: Restore Rust build cache
+        id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: windows-development-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            windows-development-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}-
       - name: Build the development installer
         run: just build --environment development --target x86_64-pc-windows-msvc --formats nsis
       - name: Verify the installer
@@ -56,3 +67,12 @@ jobs:
         run: |
           "[Download the Windows x64 development installer]($env:ARTIFACT_URL)" >> $env:GITHUB_STEP_SUMMARY
           'Extract the downloaded artifact and run its EXE on Windows. Development application data is separate from the production version.' >> $env:GITHUB_STEP_SUMMARY
+      - name: Save Rust build cache
+        if: always() && !cancelled() && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ steps.cache.outputs.cache-primary-key }}

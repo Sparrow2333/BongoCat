@@ -249,7 +249,7 @@ pub(super) fn page(view: Entity<SettingsView>, language: SettingsLanguage) -> Se
                     } else if snapshot.render_failures.contains(id) {
                         bongocat_i18n::text(locale, "online.error.render")
                     } else {
-                        String::new()
+                        ""
                     };
                     div().child(format!("ID {} {suffix}", id.0))
                 }))

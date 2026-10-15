@@ -243,11 +243,15 @@ async fn server_restart_clears_members_and_client_rejoins() {
     run.await.unwrap().unwrap();
 }
 
-#[tokio::test(start_paused = true)]
+#[tokio::test]
 async fn heartbeat_timeout_removes_an_unresponsive_member() {
     let (address, stop, run) = start().await;
     let (mut dead, _, _) = join(&address).await;
+    // Pause only to simulate idle time. Real socket I/O must use a running
+    // clock, or auto-advance can expire a handshake before the OS delivers it.
+    tokio::time::pause();
     tokio::time::advance(HEARTBEAT_TIMEOUT + Duration::from_secs(1)).await;
+    tokio::time::resume();
     // Deliberately do not answer any further heartbeat. Closure happens only
     // after removal, so the next snapshot must contain just the new member.
     timeout(Duration::from_secs(10), async {

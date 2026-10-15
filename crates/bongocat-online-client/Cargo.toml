@@ -11,7 +11,7 @@ bongocat-online-protocol.workspace = true
 futures-util.workspace = true
 rand.workspace = true
 serde_json.workspace = true
-tokio = { workspace = true, features = ["net", "rt", "sync", "time"] }
+tokio = { workspace = true, features = ["macros", "net", "rt", "sync", "time"] }
 tokio-tungstenite.workspace = true
 
 [lints]

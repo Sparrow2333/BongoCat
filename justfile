@@ -96,6 +96,7 @@ room-server-build:
 
 # Test the room contract and real WebSocket connections.
 room-server-test:
+    cargo check --locked -p bongocat-online-client
     cargo test --locked -p bongocat-online-protocol -p bongocat-online-client -p bongocat-room-server
     cargo clippy --locked -p bongocat-online-protocol -p bongocat-online-client -p bongocat-room-server --all-targets -- -D warnings
 
