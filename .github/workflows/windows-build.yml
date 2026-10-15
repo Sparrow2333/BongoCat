@@ -1,0 +1,58 @@
+name: Windows development build
+
+on:
+  push:
+    branches:
+      - feat/windows-public-room
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-development-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Windows x64 development installer
+    if: github.repository == 'Sparrow2333/BongoCat'
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Install the target for the repository toolchain
+        run: rustup target add x86_64-pc-windows-msvc
+      - uses: taiki-e/install-action@just
+      - name: Build the development installer
+        run: just build --environment development --target x86_64-pc-windows-msvc --formats nsis
+      - name: Verify the installer
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path target/package -Filter 'BongoCat_*.exe' -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected one installer, found $($installers.Count)"
+          }
+          if ($installers[0].Length -eq 0) { throw 'The installer is empty' }
+          Get-FileHash -LiteralPath $installers[0].FullName -Algorithm SHA256
+      - name: Upload the installer
+        id: installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: BongoCat-Windows-x64-development
+          path: target/package/BongoCat_*.exe
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - name: Show the download link
+        shell: pwsh
+        env:
+          ARTIFACT_URL: ${{ steps.installer.outputs.artifact-url }}
+        run: |
+          "[Download the Windows x64 development installer]($env:ARTIFACT_URL)" >> $env:GITHUB_STEP_SUMMARY
+          'Extract the downloaded artifact and run its EXE on Windows. Development application data is separate from the production version.' >> $env:GITHUB_STEP_SUMMARY
