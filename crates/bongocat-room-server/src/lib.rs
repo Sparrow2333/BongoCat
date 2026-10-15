@@ -199,6 +199,7 @@ impl RoomServer {
         let shutdown_state = state.clone();
         let app = Router::new()
             .route("/health", get(|| async { "ok\n" }))
+            .route("/bongocat", get(upgrade))
             .route("/ws", get(upgrade))
             .with_state(state);
         axum::serve(

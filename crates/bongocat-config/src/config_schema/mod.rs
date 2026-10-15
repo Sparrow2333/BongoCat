@@ -311,7 +311,9 @@ pub struct OnlineConfig {
         any(test, feature = "schema-generation"),
         schemars(
             length(max = 512),
-            regex(pattern = r"^(?:|ws://(?:\[[0-9a-fA-F:]+\]|[^\s/?#@:]+)(?::[0-9]+)?/ws)$")
+            regex(
+                pattern = r"^(?:|ws://(?:\[[0-9a-fA-F:]+\]|[^\s/?#@:]+)(?::[0-9]+)?/(?:bongocat|ws))$"
+            )
         )
     )]
     pub server_address: String,

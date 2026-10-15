@@ -1182,10 +1182,19 @@ fn pre_online_v1_data_starts_without_joining_and_new_address_round_trips() {
     config.validate().unwrap();
     assert!(config.online.server_address.is_empty());
     let mut next = config;
-    next.online.server_address = "ws://203.0.113.10:8080/ws".into();
+    next.online.server_address = "ws://203.0.113.10:8080/bongocat".into();
     next.validate().unwrap();
     assert_eq!(
         serde_json::from_str::<NativeConfig>(&serde_json::to_string(&next).unwrap()).unwrap(),
         next
     );
+}
+
+#[test]
+fn existing_ws_address_remains_readable_and_round_trips() {
+    let old = include_bytes!("../../../../shared/config/fixtures/accept-online-ws.json");
+    let (config, _) = parse_config(old).expect("existing v1 room address");
+    assert_eq!(config.online.server_address, "ws://203.0.113.10:8080/ws");
+    let bytes = serde_json::to_vec(&config).expect("serialize configuration");
+    assert_eq!(parse_config(&bytes).expect("read configuration").0, config);
 }

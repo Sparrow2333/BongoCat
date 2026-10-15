@@ -89,14 +89,7 @@ impl Render for SettingsView {
         let snapshot = self.snapshot.clone();
         #[cfg(target_os = "windows")]
         {
-            if !self.online_address_initialized
-                && let Some(snapshot) = &snapshot
-            {
-                self.online_address.update(cx, |input, cx| {
-                    input.set_value(snapshot.online_server_address.clone(), window, cx)
-                });
-                self.online_address_initialized = true;
-            }
+            self.sync_online_address(window, cx);
             let error = self.online_error.take().or_else(|| {
                 self.client
                     .online_client()

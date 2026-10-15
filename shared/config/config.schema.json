@@ -413,7 +413,7 @@
         "server_address": {
           "default": "",
           "maxLength": 512,
-          "pattern": "^(?:|ws://(?:\\[[0-9a-fA-F:]+\\]|[^\\s/?#@:]+)(?::[0-9]+)?/ws)$",
+          "pattern": "^(?:|ws://(?:\\[[0-9a-fA-F:]+\\]|[^\\s/?#@:]+)(?::[0-9]+)?/(?:bongocat|ws))$",
           "type": "string"
         }
       },

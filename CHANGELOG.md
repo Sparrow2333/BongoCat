@@ -7,6 +7,11 @@
 - Added a Windows single-file EXE option with embedded preset models, without an installation wizard. Download a new EXE to update this version.
 
 - Added an optional Windows public room for eight people, with temporary IDs and desktop cats driven by random paw actions. Actual keys and pointer coordinates stay on the computer; activity timing remains visible over the unencrypted connection. The room can be self-hosted with Docker Compose.
+- Public rooms can be reached at `/bongocat`, including through a reverse proxy. Existing `/ws` addresses remain supported.
+
+### 🐛 Bug Fixes
+
+- Widened the online server address field and kept it editable during connection and reconnection. Loading settings no longer replaces an address already being entered.
 
 ## 2.3.1 - 2026-10-13
 

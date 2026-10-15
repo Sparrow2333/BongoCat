@@ -24,6 +24,8 @@ mod model_drag_overlay;
 mod model_editor_render;
 mod model_import;
 mod models_page_render;
+#[cfg(target_os = "windows")]
+mod online;
 mod settings_commands;
 mod settings_page;
 mod shortcuts;

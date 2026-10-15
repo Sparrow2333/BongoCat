@@ -425,7 +425,7 @@ mod tests {
         let mut owner = OnlineOwner::start(ActivitySignal::default()).unwrap();
         owner
             .client()
-            .join("ws://192.0.2.1:8080/ws".into())
+            .join("ws://192.0.2.1:8080/bongocat".into())
             .unwrap();
         assert!(owner.shutdown().is_ok());
     }

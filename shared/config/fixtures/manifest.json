@@ -310,6 +310,11 @@
       "id": "online-invalid-address",
       "file": "invalid-online-address.json",
       "expected": "reject"
+    },
+    {
+      "id": "online-existing-ws-address",
+      "file": "accept-online-ws.json",
+      "expected": "accept"
     }
   ]
 }

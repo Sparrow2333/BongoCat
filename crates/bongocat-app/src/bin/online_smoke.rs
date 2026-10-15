@@ -37,7 +37,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap();
         });
     });
-    let endpoint = format!("ws://{}/ws", receiver.recv_timeout(Duration::from_secs(5))?);
+    let endpoint = format!(
+        "ws://{}/bongocat",
+        receiver.recv_timeout(Duration::from_secs(5))?
+    );
     let model = Arc::new(
         PresetModelCatalog::open(&root, ModelPackageLimits::default())?
             .load(&ModelId::parse("standard")?)?,

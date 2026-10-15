@@ -566,7 +566,7 @@
       "failed": "连接失败"
     },
     "error": {
-      "invalid_address": "请输入形如 ws://203.0.113.10:8080/ws 的地址",
+      "invalid_address": "请输入形如 ws://203.0.113.10:8080/bongocat 的地址",
       "unavailable": "联机服务不可用",
       "connection": "无法连接房间，正在重试",
       "protocol": "房间协议不兼容或消息无效",

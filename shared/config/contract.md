@@ -528,4 +528,4 @@ modifier、抑制重复 key down；binding replace 保留 pressed set 以避免 
 
 ## Online room preferences
 
-`online` is optional in v1 and defaults to `{ "server_address": "" }`. Its only persisted field is an optional `server_address`; empty means no configured server. A non-empty value must be a plain `ws://host[:port]/ws` endpoint without credentials, query, or fragment, up to 512 bytes. Reading a stored address never joins a room. IDs, members, actions, and connection state are session-only. Environment isolation and the separate update transport rules still apply.
+`online` is optional in v1 and defaults to `{ "server_address": "" }`. Its only persisted field is an optional `server_address`; empty means no configured server. A non-empty value must be a plain `ws://host[:port]/bongocat` endpoint without credentials, query, or fragment, up to 512 bytes. Existing `/ws` addresses remain valid and connect to the same room. Reading a stored address never joins a room. IDs, members, actions, and connection state are session-only. Environment isolation and the separate update transport rules still apply.

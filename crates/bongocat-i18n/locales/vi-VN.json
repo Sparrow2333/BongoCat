@@ -566,7 +566,7 @@
       "failed": "Kết nối thất bại"
     },
     "error": {
-      "invalid_address": "Nhập địa chỉ như ws://203.0.113.10:8080/ws",
+      "invalid_address": "Nhập địa chỉ như ws://203.0.113.10:8080/bongocat",
       "unavailable": "Dịch vụ trực tuyến không khả dụng",
       "connection": "Không thể kết nối; đang thử lại",
       "protocol": "Giao thức phòng không tương thích hoặc không hợp lệ",

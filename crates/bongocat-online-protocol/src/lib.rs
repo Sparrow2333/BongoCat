@@ -13,7 +13,7 @@ pub fn valid_server_address(address: &str) -> bool {
         || !address.starts_with("ws://")
         || address[5..]
             .split_once('/')
-            .is_none_or(|(_, path)| path != "ws")
+            .is_none_or(|(_, path)| !matches!(path, "bongocat" | "ws"))
     {
         return false;
     }
@@ -24,7 +24,7 @@ pub fn valid_server_address(address: &str) -> bool {
         && url.host_str().is_some()
         && url.username().is_empty()
         && url.password().is_none()
-        && url.path() == "/ws"
+        && matches!(url.path(), "/bongocat" | "/ws")
         && url.query().is_none()
         && url.fragment().is_none()
         && url.port_or_known_default().is_some()
@@ -147,19 +147,25 @@ mod tests {
     #[test]
     fn address_validation_keeps_plain_room_endpoints_separate_from_update_urls() {
         for address in [
-            "ws://127.0.0.1:8080/ws",
-            "ws://[::1]:8080/ws",
+            "ws://127.0.0.1:8080/bongocat",
+            "ws://[::1]:8080/bongocat",
+            "ws://example.com/bongocat",
             "ws://example.com/ws",
         ] {
             assert!(valid_server_address(address));
         }
         for address in [
-            "https://example.com/ws",
-            "wss://example.com/ws",
-            "ws://user:pass@example.com/ws",
-            "ws://example.com/a/../ws",
-            "ws://example.com/ws?key=a",
-            "ws://example.com:99999/ws",
+            "https://example.com/bongocat",
+            "wss://example.com/bongocat",
+            "ws://user:pass@example.com/bongocat",
+            "ws://example.com/a/../bongocat",
+            "ws://example.com/bongocat?key=a",
+            "ws://example.com/bongocat#fragment",
+            "ws://example.com:99999/bongocat",
+            "ws://example.com/",
+            "ws://example.com/bongocat/",
+            "ws://example.com/bongocat/extra",
+            "ws://example.com/bongocat-other",
         ] {
             assert!(!valid_server_address(address));
         }

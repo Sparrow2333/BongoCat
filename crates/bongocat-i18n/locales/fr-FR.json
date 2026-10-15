@@ -566,7 +566,7 @@
       "failed": "Échec de connexion"
     },
     "error": {
-      "invalid_address": "Saisissez une adresse comme ws://203.0.113.10:8080/ws",
+      "invalid_address": "Saisissez une adresse comme ws://203.0.113.10:8080/bongocat",
       "unavailable": "Service en ligne indisponible",
       "connection": "Connexion impossible ; nouvel essai en cours",
       "protocol": "Protocole du salon incompatible ou invalide",

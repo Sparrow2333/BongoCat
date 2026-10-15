@@ -566,7 +566,7 @@
       "failed": "Connection failed"
     },
     "error": {
-      "invalid_address": "Enter an address such as ws://203.0.113.10:8080/ws",
+      "invalid_address": "Enter an address such as ws://203.0.113.10:8080/bongocat",
       "unavailable": "Online service is unavailable",
       "connection": "Cannot connect to the room; retrying",
       "protocol": "Room protocol is incompatible or invalid",

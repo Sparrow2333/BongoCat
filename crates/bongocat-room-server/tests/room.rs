@@ -19,7 +19,7 @@ async fn start() -> (
     let server = RoomServer::bind("127.0.0.1:0".parse().unwrap())
         .await
         .unwrap();
-    let address = format!("ws://{}/ws", server.address().unwrap());
+    let address = format!("ws://{}/bongocat", server.address().unwrap());
     let (stop, stopped) = oneshot::channel();
     let run = tokio::spawn(server.run(async {
         let _ = stopped.await;
@@ -60,6 +60,20 @@ async fn join(address: &str) -> (Socket, MemberId, Vec<MemberId>) {
         ServerMessage::Welcome { you, members, .. } => (socket, you, members),
         other => panic!("unexpected welcome: {other:?}"),
     }
+}
+
+#[tokio::test]
+async fn legacy_ws_address_joins_the_same_room_as_bongocat() {
+    let (address, stop, run) = start().await;
+    let (current, current_id, _) = join(&address).await;
+    let legacy_address = address.strip_suffix("/bongocat").unwrap().to_owned() + "/ws";
+    let (legacy, _, members) = join(&legacy_address).await;
+    assert_eq!(members.len(), 2);
+    assert!(members.contains(&current_id));
+    drop(current);
+    drop(legacy);
+    let _ = stop.send(());
+    run.await.unwrap().unwrap();
 }
 
 #[tokio::test]
@@ -202,7 +216,7 @@ async fn server_restart_clears_members_and_client_rejoins() {
         .await
         .unwrap();
     let address = server.address().unwrap();
-    let endpoint = format!("ws://{address}/ws");
+    let endpoint = format!("ws://{address}/bongocat");
     let (stop, stopped) = oneshot::channel();
     let run = tokio::spawn(server.run(async {
         let _ = stopped.await;

@@ -8,8 +8,14 @@
 
 ## Phase 5：联机
 
+Ubuntu `/srv/BongoCat` 部署已提供 Caddy 专用 Compose 覆盖和 systemd unit；自动契约验证只绑定本机端口且不启用双重重启策略，Linux CI 校验 unit。仍需服务器构建、启停、容器异常恢复、Docker/宿主机重启和真实客户端联通证据。
+
+公共房间入口统一为 `/bongocat`，保留已有 `/ws` 地址的读取与联机兼容；路由及真实客户端回归已补充，`just room-server-test`、配置 crate 单测和独立 config-store contract 已通过；Windows UI 与实机门禁仍待完成。
+
+地址输入框改为全宽，连接/重连不再锁定编辑，并保护首次快照前的输入草稿；已补充点击输入、粘贴、延迟快照及 800×600 布局回归。仍需 Windows 执行 UI 测试、实机编辑和 125/150/200% 缩放验收。组件依据：GPUI Kit 0.7.3 的 [Input](https://gpui-kit.com/component/input/) 与 [SettingItem 垂直布局](https://gpui-kit.com/component/settings/#vertical-layout)。
+
 - [ ] **P5-WINDOWS-PUBLIC-ROOM**：协议 v1、8 人内存房间、随机拍爪、Windows 多猫与 ID、默认不自动加入、旧配置兼容、Docker Compose 和专用 CI 已加入。依赖 ADR-0090 与既有 runtime/overlay contract。退出条件：`just check`、`just room-server-test`、独立 config-store contract、Ubuntu Docker 健康及重启验证、Windows `just online-smoke`，Windows 10/11 双客户端、125/150/200% 缩放与跨屏、错误/重试/断线/正常退出及 8 小时 CPU/内存/GPU/线程/日志 soak。缺少编译或实机证据时不得勾选。
 
 ## Phase 7：构建与交付
 
-- [ ] **P7-WINDOWS-SINGLE-EXE**：按 ADR-0091 提供 `just build --standalone` 与 Windows Development 单文件产物，内嵌预置模型并在退出时清理临时资源，禁用安装器自动更新。依赖既有 Windows/Cubism 与打包 contract；退出条件：自动化资源/生命周期/参数/更新回归、`just check`、Windows 构建、干净 Windows 10/11 DLL 依赖与离仓启动、模型切换、登录启动项、正常退出及临时目录清理验收。本地打包测试、独立资源与更新 contract 已通过；应用检查受现有 macOS Swift 工具链和缺失 MSVC SDK 阻断，完整检查还遇到已有联机测试格式差异。未取得 Windows 构建及实机证据，保持未勾选。
+- [ ] **P7-WINDOWS-SINGLE-EXE**：按 ADR-0091 提供 `just build --standalone` 与 Windows Development 单文件产物，内嵌预置模型并在退出时清理临时资源，禁用安装器自动更新。依赖既有 Windows/Cubism 与打包 contract；退出条件：自动化资源/生命周期/参数/更新回归、`just check`、Windows 构建、干净 Windows 10/11 DLL 依赖与离仓启动、模型切换、登录启动项、正常退出及临时目录清理验收。本地打包测试、独立资源与更新 contract 已通过；Windows CI 已通过 standalone 测试、release 构建及离仓内嵌资源检查，产物已上传。应用完整检查仍受现有 macOS Swift 工具链阻断；干净 Windows 10/11 的 DLL、产品启动和实机验收仍缺失，保持未勾选。

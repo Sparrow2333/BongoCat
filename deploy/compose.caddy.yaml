@@ -1,0 +1,7 @@
+name: bongocat-room
+
+services:
+  room:
+    ports: !override
+      - "127.0.0.1:${BONGOCAT_ROOM_PORT:-18080}:8080/tcp"
+    restart: "no"

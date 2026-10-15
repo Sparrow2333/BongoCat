@@ -13,6 +13,7 @@ jobs:
         with:
           toolchain: 1.97.1
       - uses: taiki-e/install-action@just
+      - run: python3 -m unittest tools.tests.test_room_deployment_contract
       - run: just room-server-test
       - run: docker compose build
       - run: docker compose up -d --wait

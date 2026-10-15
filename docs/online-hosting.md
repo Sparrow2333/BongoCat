@@ -1,45 +1,155 @@
 # Hosting a room on Ubuntu
 
-Use Ubuntu 22.04 x86_64 with Docker and Docker Compose, and expose one TCP port. No domain, certificate, or database is needed. The public room is anonymous: transport is unencrypted and displayed IDs do not authenticate people.
+Keep the source at `/srv/BongoCat` on Ubuntu 22.04 x86_64. Docker runs the room, Caddy runs on the host, and systemd handles boot startup and restarts. No domain, certificate, or database is required; the public room uses anonymous, unencrypted WebSocket connections.
 
-Run from the source root:
+Install [Docker Engine and the Compose plugin](https://docs.docker.com/engine/install/ubuntu/) and [Caddy](https://caddyserver.com/docs/install#debian-ubuntu-raspbian). Compose 2.24.4 or newer is required to replace the complete port list. Docker must be installed at `/usr/bin/docker`. This guide uses the system Docker service rather than rootless Docker.
 
-```sh
-docker compose up -d --build
-```
+## Source and configuration
 
-Expected: the room container starts and becomes healthy.
+Place the current source, including the `/bongocat` changes and `deploy/`, at `/srv/BongoCat`. Uncommitted or unpushed changes are not included in a remote clone. The directory must contain `Dockerfile`, `compose.yaml`, `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `crates/`, and `deploy/`.
 
-```sh
-curl -f http://127.0.0.1:8080/health
-```
-
-Expected: `ok`. Allow TCP 8080 in the host firewall and your cloud security group. On Windows, open **Settings → Online**, enter `ws://YOUR_PUBLIC_IP:8080/ws`, and click **Join**. Clients do not need the server's login credentials.
-
-To change the host port, create `.env` in the source root with `BONGOCAT_ROOM_PORT=18080`, then run the startup command again. Clients use `ws://YOUR_PUBLIC_IP:18080/ws`. The container port remains 8080, so its health check does not change.
+Run all Compose commands from the source directory:
 
 ```sh
-docker compose ps
+cd /srv/BongoCat
 ```
 
-Expected: healthy status and the published port.
+Expected: the working directory is `/srv/BongoCat`.
 
 ```sh
-docker compose logs --tail=50 room
+docker compose version
 ```
 
-Expected: startup status or errors, without keys, coordinates, or per-action logs. Docker retains at most three 10 MB log files.
-
-The room supports eight people including yourself. A full room requires manual retry. Network failures reconnect automatically and may change the temporary ID. Restarting the server clears room membership; there is no room database to back up. With one Windows computer, developers can run `just online-smoke` to test seven remote cats with simulated members. Two real clients still require two computers for acceptance testing.
+Expected: Compose 2.24.4 or newer.
 
 ```sh
-docker compose restart room
+sudo docker compose -f compose.yaml -f deploy/compose.caddy.yaml config
 ```
 
-Expected: clients disconnect and rejoin without retaining old members or actions.
+Expected: project `bongocat-room`, one published TCP port mapping from `127.0.0.1:18080` to container port 8080, and `restart: no`. The override inherits resource and logging limits while replacing the entire public port list. Always supply both `-f` arguments.
+
+To change the host port, set `BONGOCAT_ROOM_PORT=YOUR_PORT` in the source directory's `.env` and update the Caddy upstream accordingly. The container still listens on `0.0.0.0:8080`; its `/health` check does not change.
+
+## Build and systemd
 
 ```sh
-docker compose down
+sudo docker compose -f compose.yaml -f deploy/compose.caddy.yaml build room
 ```
 
-Expected: stop and remove the room container and network. Starting again uses the same configuration.
+Expected: a successful room image build. The first build downloads dependencies and compiles Rust, so it can take some time. The host does not need Rust. Service startup uses the existing image without building or downloading.
+
+```sh
+sudo install -m 0644 deploy/bongocat-room.service /etc/systemd/system/bongocat-room.service
+```
+
+Expected: the service file is installed. Change its `WorkingDirectory` first if the source is not at `/srv/BongoCat`.
+
+```sh
+sudo systemd-analyze verify /etc/systemd/system/bongocat-room.service
+```
+
+Expected: no service-file errors.
+
+```sh
+sudo systemctl daemon-reload
+```
+
+Expected: systemd reloads the service definition.
+
+```sh
+sudo systemctl enable --now docker.service
+```
+
+Expected: Docker is running and enabled at boot.
+
+```sh
+sudo systemctl enable --now bongocat-room.service
+```
+
+Expected: the room starts and is enabled at boot. Closing SSH does not stop it.
+
+```sh
+systemctl status bongocat-room.service --no-pager
+```
+
+Expected: `active (running)`. systemd supervises foreground Compose and restarts it after five seconds when the container exits. Docker's restart policy is disabled. A systemctl restart of Docker also restarts the room; explicitly stopping the room does not trigger automatic restart. Running status does not replace the health check below.
+
+```sh
+curl --fail --retry 10 --retry-delay 1 --retry-connrefused http://127.0.0.1:18080/health
+```
+
+Expected: `ok`.
+
+## Caddy and clients
+
+Use `deploy/Caddyfile.example` as a reference and add the following to `/etc/caddy/Caddyfile`, replacing the example IP with your public IP. If that IP already has a site block, merge only the `reverse_proxy` line into it:
+
+```caddyfile
+http://203.0.113.10 {
+    reverse_proxy /bongocat 127.0.0.1:18080
+}
+```
+
+Keep the path unchanged: the server accepts `/bongocat` directly. Existing `/ws` addresses still work when that path is reachable, but this proxy exposes only `/bongocat`.
+
+```sh
+sudo caddy validate --config /etc/caddy/Caddyfile
+```
+
+Expected: configuration validation succeeds.
+
+```sh
+sudo systemctl enable --now caddy.service
+```
+
+Expected: Caddy is running and enabled at boot.
+
+```sh
+sudo systemctl reload caddy.service
+```
+
+Expected: Caddy loads the proxy configuration.
+
+Allow TCP 80 in the cloud security group and host firewall. Do not expose 18080 or 8080 to the public network. In a Windows client containing these changes, open **Settings → Online**, enter `ws://YOUR_PUBLIC_IP/bongocat`, and click **Join**. Editing the address does not change an active connection; click **Leave** or **Cancel** before joining another address.
+
+## Logs, updates, and stopping
+
+```sh
+sudo journalctl -u bongocat-room.service -n 100 --no-pager
+```
+
+Expected: service startup, restart, and foreground Compose output.
+
+```sh
+sudo docker compose -f compose.yaml -f deploy/compose.caddy.yaml ps
+```
+
+Expected: healthy status and a port bound only to loopback.
+
+```sh
+sudo docker compose -f compose.yaml -f deploy/compose.caddy.yaml logs --tail=100 room
+```
+
+Expected: container logs without keys, coordinates, or per-action messages. Docker retains at most three 10 MB log files. Foreground logs also go to journald, whose retention is controlled by the host's journald configuration.
+
+After updating the source in `/srv/BongoCat`, run the `build room` command above again. After a successful build, restart:
+
+```sh
+sudo systemctl restart bongocat-room.service
+```
+
+Expected: the new image is used and clients disconnect and rejoin. After changing the service definition, also repeat install and daemon-reload.
+
+```sh
+sudo systemctl stop bongocat-room.service
+```
+
+Expected: the container stops gracefully without automatic restart. Source, images, and containers are retained. Use `systemctl start` to start again.
+
+```sh
+sudo systemctl disable --now bongocat-room.service
+```
+
+Expected: the room stops and its boot and Docker-start associations are disabled. Do not run a separate `docker compose up -d` management path for this deployment.
+
+The room supports eight people including yourself. A full room requires manual retry. Network failures reconnect automatically and may change temporary IDs. Server restarts clear membership; room state and actions are not persisted. A persistent systemd service does not persist room data. Two real clients and host-reboot acceptance still require machine validation.

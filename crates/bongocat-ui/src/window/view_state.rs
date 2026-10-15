@@ -342,9 +342,22 @@ impl SettingsView {
             )
             .detach();
         }
+        #[cfg(target_os = "windows")]
+        let online_address = cx.new(|cx| InputState::new(window, cx));
+        #[cfg(target_os = "windows")]
+        cx.subscribe(&online_address, |view, _, event: &InputEvent, cx| {
+            if matches!(event, InputEvent::Change) {
+                // The field is a draft until Join. A delayed first snapshot must
+                // not replace text already entered or pasted by the user.
+                view.online_address_initialized = true;
+                view.online_error = None;
+                cx.notify();
+            }
+        })
+        .detach();
         Self {
             #[cfg(target_os = "windows")]
-            online_address: cx.new(|cx| InputState::new(window, cx)),
+            online_address,
             #[cfg(target_os = "windows")]
             online_address_initialized: false,
             #[cfg(target_os = "windows")]

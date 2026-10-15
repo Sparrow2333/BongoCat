@@ -1,0 +1,5 @@
+# Replace this example IP with the server's public IP.
+# Merge the reverse_proxy line into an existing site block for the same IP.
+http://203.0.113.10 {
+    reverse_proxy /bongocat 127.0.0.1:18080
+}

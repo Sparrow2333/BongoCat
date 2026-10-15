@@ -1,5 +1,6 @@
 use super::*;
 use bongocat_ui_protocol::{OnlineError, OnlinePhase, RoomError};
+use gpui_kit::base::TestSupportExt as _;
 
 pub(super) fn error_key(error: OnlineError) -> &'static str {
     match error {
@@ -17,6 +18,19 @@ pub(super) fn error_key(error: OnlineError) -> &'static str {
 }
 
 impl SettingsView {
+    pub(super) fn sync_online_address(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.online_address_initialized {
+            return;
+        }
+        let Some(snapshot) = &self.snapshot else {
+            return;
+        };
+        self.online_address.update(cx, |input, cx| {
+            input.set_value(snapshot.online_server_address.clone(), window, cx)
+        });
+        self.online_address_initialized = true;
+    }
+
     pub(super) fn start_online_polling(&self, cx: &mut Context<Self>) {
         let executor = cx.background_executor().clone();
         cx.spawn(async move |this, cx| {
@@ -119,15 +133,19 @@ pub(super) fn page(view: Entity<SettingsView>, language: SettingsLanguage) -> Se
         bongocat_i18n::text(locale, "online.address"),
         SettingField::element(move |_: &RenderOptions, _: &mut Window, app: &mut App| {
             let view = input_view.read(app);
-            let connected = view.client.online_client().is_some_and(|client| {
-                client.snapshot().phase != OnlinePhase::Offline
-                    && client.snapshot().phase != OnlinePhase::Failed
-            });
-            Input::new(&view.online_address)
-                .disabled(connected || view.online_join_pending)
+            div()
+                .id("online-address-field")
+                .w_full()
+                .child(
+                    Input::new(&view.online_address)
+                        .w_full()
+                        .disabled(view.online_join_pending),
+                )
+                .test_support()
                 .into_any_element()
         }),
     )
+    .layout(gpui_kit::Axis::Vertical)
     .description(bongocat_i18n::text(locale, "online.privacy"));
     let action_view = view.clone();
     let actions = SettingItem::new(
